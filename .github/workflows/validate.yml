@@ -11,7 +11,7 @@ jobs:
   powershell:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Parse scripts, scan public files, and validate local links
         shell: pwsh
         run: ./tests/Test-Repository.ps1
@@ -19,6 +19,6 @@ jobs:
   shell:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Parse container shell scripts
         run: bash -n container/*.sh
