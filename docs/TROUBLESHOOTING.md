@@ -7,7 +7,7 @@
 | `Cannot use 'vdi' as a backing file` or snapshot migration errors | A VDI remains in the active PANDA chain. Recreate the standalone seed by flattening the prepared qcow2 with modern host `qemu-img`. |
 | PANDA creates a zero-byte `-rr-snp` | Recording snapshot failed. Verify a standalone qcow2 seed and retain `snapshot=on` for the writable raw pflash variable store. |
 | `Not a migration stream` or `Failed to load vmstate` | Replay was given an invalid or empty recording snapshot. Fix the snapshot gate and make a new recording. |
-| noVNC opens but Windows stays on a spinner | The VM may still be executing without becoming interactive. Inspect logs and monitor state, but do not call it ready until desktop and authenticated SSH work. |
+| noVNC opens but Windows stays on a spinner | PANDA can take far longer than modern QEMU to boot Windows 11. Compare register and block-I/O samples over time. If execution and I/O continue, keep waiting; the originating guest fully booted only after earlier 12- and 20-minute checks had already been judged too slow. |
 | TCP 2222 is listening but SSH times out | QEMU's host forward is active before guest `sshd` is ready. Use `Test-GuestSsh.ps1`; wait for Windows or diagnose guest boot. |
 | Guest setup fails while adding OpenSSH Server | The Windows capability source may be unavailable. Temporarily allow the guest appropriate network access or provide a Windows feature source, then rerun the idempotent bootstrap. |
 | `e1000e` has no guest link | Use the repository's `e1000` device. That was the compatible device in the originating lab. |
@@ -37,5 +37,6 @@ Monitor commands useful for distinguishing a frozen display from execution:
 ```
 
 Take samples several seconds apart. Changing instruction pointers and I/O
-counters show progress, but only desktop and SSH establish interactive
+counters show progress and justify a longer wait. The desktop establishes boot
+completion; authenticated SSH and the target scenario establish application
 readiness.

@@ -12,10 +12,10 @@ private keys, PANDA recordings, or proprietary software.
 > [!IMPORTANT]
 > PANDA's current public Docker image is based on a QEMU 2.9-era fork and uses
 > software translation for record/replay. Windows 11 is outside PANDA's
-> documented Windows OSI profiles. A record/replay smoke test can succeed even
-> when a specific Windows 11 image never becomes interactively usable under
-> PANDA. Treat this project as a compatibility lab, not a claim of general
-> Windows 11 support.
+> documented Windows OSI profiles. The originating Windows 11 guest did fully
+> boot under PANDA, but startup and interaction were extremely slow. Treat this
+> project as a compatibility lab, not a claim that every Windows 11 build will
+> boot or perform acceptably.
 
 ## What this project provides
 
@@ -128,10 +128,11 @@ will be much slower.
 
 The originating lab validated the PANDA infrastructure with a completed
 388,439,348-instruction record/replay and a nonempty ASID/basic-block coverage
-report. The tested Windows 11 disk booted and accepted SSH under modern QEMU,
-but it did not reach an interactive desktop or SSH under the tested PANDA
-configuration. Full evidence and the distinction between infrastructure and
-guest readiness are documented in [docs/VALIDATION.md](docs/VALIDATION.md).
+report. The tested Windows 11 disk booted under modern QEMU and eventually
+booted fully under PANDA. PANDA execution was extremely slow, and earlier
+fixed-duration checks ended before the desktop appeared. Full evidence and the
+distinction between boot success and workload suitability are documented in
+[docs/VALIDATION.md](docs/VALIDATION.md).
 
 ## Time-sensitive workloads
 

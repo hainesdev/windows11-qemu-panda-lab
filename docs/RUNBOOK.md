@@ -175,7 +175,7 @@ PANDA uses one emulated vCPU. Increasing the Docker CPU allocation does not
 turn deterministic guest execution into hardware acceleration or multicore
 record/replay.
 
-## 9. Require interactive readiness
+## 9. Require boot and application readiness
 
 Before application work, require all of the following:
 
@@ -185,6 +185,11 @@ Before application work, require all of the following:
 
 If any gate fails, the infrastructure may still support a synthetic smoke
 recording, but the guest is not application-ready.
+
+Do not use a fixed 10- or 20-minute timeout as proof that Windows is hung under
+PANDA. The originating guest fully booted only after a much longer wait. Sample
+registers and block I/O through the monitor; if they continue changing, extend
+the observation window.
 
 ## 10. Validate snapshot, record, and replay
 

@@ -40,6 +40,13 @@ PANDA for deterministic execution. A previously installed guest may execute
 in that environment, but this is outside the normal Windows 11 hardware
 baseline. See [Microsoft's Windows 11 requirements](https://learn.microsoft.com/windows/whats-new/windows-11-requirements).
 
+The originating Windows 11 guest ultimately reached a fully booted,
+interactive desktop under PANDA. It did so very slowly. Earlier 12- and
+20-minute observation windows were too short and led to an incorrect initial
+assessment that the boot had stalled. A moving instruction pointer and rising
+disk counters should therefore be treated as evidence to keep waiting, not as
+proof that the guest will never become interactive.
+
 PANDA's documented Windows OSI profiles cover older Windows releases rather
 than Windows 10 or 11. Consequently this project uses `coverage:mode=asid-block`,
 which does not depend on a Windows 11 OSI profile. Do not assume that process
@@ -55,6 +62,8 @@ In the originating lab:
 
 - modern QEMU booted the prepared guest successfully with a `Westmere` CPU and
   `e1000` NIC under TCG;
+- PANDA eventually completed the Windows 11 boot and exposed an interactive
+  desktop, with extreme startup and interaction latency;
 - PANDA progressed farthest with the augmented `qemu64` CPU in `common.sh`;
 - PANDA named `Westmere`, `Broadwell`, `Skylake`, and `max` experiments failed
   earlier in boot;

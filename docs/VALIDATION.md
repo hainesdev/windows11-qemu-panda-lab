@@ -41,16 +41,29 @@ Pass criteria:
 This reduces the difference between the preparation and PANDA environment but
 does not reproduce PANDA's older QEMU exactly.
 
-## Gate D: PANDA interactive readiness
+## Gate D1: PANDA interactive boot
 
 Pass criteria:
 
-- Windows reaches a usable desktop in noVNC;
-- authenticated SSH works; and
-- the intended application starts and its scenario can be exercised.
+- Windows completes boot and reaches a usable desktop in noVNC; and
+- keyboard and pointer interaction works.
 
 Changing registers, increasing block I/O, or executing CPL3 code proves that
-the guest is running. It does not prove interactive readiness.
+the guest is running. It does not by itself prove that boot completed. With
+PANDA's extreme TCG latency, however, continued progress is a reason to extend
+the observation window rather than declare a hang.
+
+## Gate D2: application readiness
+
+Pass criteria:
+
+- authenticated SSH works after the full PANDA boot;
+- the intended application starts; and
+- its complete scenario can be exercised within the experiment's timing
+  constraints.
+
+A completed Windows boot does not make PANDA suitable for a workload with an
+external wall-clock deadline.
 
 ## Gate E: snapshot and record finalization
 
@@ -88,15 +101,17 @@ The originating lab retained this smoke-test evidence:
 | Coverage rows | 47,008 |
 | Coverage mode | `asid-block` |
 
-This passes Gates A, E, and F for that environment. It proves the block
-snapshot, nondeterminism log, replay engine, coverage plugin, and artifact
-paths.
+This passes Gates A, D1, E, and F for that environment. It proves the Windows
+11 interactive boot, block snapshot, nondeterminism log, replay engine,
+coverage plugin, and artifact paths.
 
-It does **not** pass Gate D for the tested Windows 11 image. That guest reached
-the desktop and SSH under modern QEMU, while the PANDA console remained at the
-boot spinner and SSH did not return a banner during the final timed attempts.
-The evidence points to a Windows 11/PANDA-QEMU compatibility boundary rather
-than a damaged disk.
+The guest reached the desktop and authenticated SSH under modern QEMU. Under
+PANDA, the guest ultimately completed boot and became interactive. Earlier
+automated checks stopped after 12 to 20 minutes while the console still showed
+the boot spinner; those cutoffs were premature. They demonstrate extreme
+latency, not a failed boot. PANDA-side SSH and the target application's full
+scenario should still be validated separately after each complete boot before
+claiming Gate D2.
 
 ## Experiment record
 
