@@ -1,0 +1,40 @@
+# Local configuration
+/config/panda.psd1
+
+# Generated bootstrap and credentials
+*.key
+*.pem
+*.ppk
+*.pub
+/bootstrap/
+/ssh/
+
+# VM images, firmware copies, recordings, and captures
+*.vdi
+*.vhd
+*.vhdx
+*.vmdk
+*.qcow
+*.qcow2
+*.raw
+*.fd
+*.iso
+*.img
+*.pcap
+*.pcapng
+*-rr-snp
+*-rr-nondet.log
+*.plog
+
+# Runtime output
+/recordings/
+/analyses/
+/logs/
+*.pid
+known_hosts
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
