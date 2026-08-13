@@ -4,7 +4,8 @@
 
 | Component | Tested value |
 |---|---|
-| Host architecture | Windows x64 |
+| Host architecture | Windows x64, build 26200 |
+| Docker client/engine | 29.2.0 / 29.2.0 |
 | Host QEMU | 11.0.50 development build |
 | PANDA release | 1.8.83 |
 | PANDA embedded QEMU | 2.9.1 |
@@ -13,6 +14,15 @@
 | PANDA CPU | augmented `qemu64`, `GenuineIntel` vendor |
 | Disk | IDE-attached qcow2 overlay over a standalone qcow2 seed |
 | NIC | `e1000` with QEMU user networking |
+
+The originating OVMF templates had these SHA-256 hashes:
+
+- x86-64 code: `33090CC07675BAA5190D9F1E84BF5176B33BCBFA9BACAC522961150CDB6DBB2A`
+- variable store: `5D2AC383371B408398ACCEE7EC27C8C09EA5B74A0DE0CEEA6513388B15BE5D1E`
+
+The guest Windows edition/build and exact completed-boot duration were not
+retained in the public evidence. New reproductions should capture them rather
+than extrapolate from the host or invent a timing number.
 
 These values document one experiment; they are not a universal support
 matrix.
@@ -70,6 +80,11 @@ In the originating lab:
 - `e1000e` did not produce a usable guest link, while `e1000` did; and
 - writable raw pflash caused recording snapshot failure unless the variable
   store used `snapshot=on`.
+
+The PANDA variable store begins as a fresh copy of the configured OVMF template
+rather than the modern-QEMU preparation variable store. The Windows disk must
+therefore contain a discoverable UEFI bootloader and must not depend solely on
+a firmware boot entry stored in the preparation VM's NVRAM.
 
 These are empirical compatibility choices, not required settings for every
 Windows image.

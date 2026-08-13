@@ -20,4 +20,9 @@ foreach ($key in $requiredKeys) {
     }
 }
 
+. (Join-Path $PSScriptRoot 'LabPaths.ps1')
+foreach ($key in 'PrepOverlay', 'PrepVars', 'SeedDisk', 'ActiveDisk', 'PandaCode', 'PandaVars') {
+    $null = Resolve-LabWorkPath -Config $config -Path ([string]$config[$key])
+}
+
 $config

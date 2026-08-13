@@ -4,5 +4,10 @@ param(
     [string]$Name = 'root'
 )
 
-& (Join-Path $PSScriptRoot 'Invoke-PandaMonitor.ps1') "savevm $Name" -TimeoutSeconds 60
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+$monitor = Join-Path $PSScriptRoot 'Invoke-PandaMonitor.ps1'
+& $monitor "savevm $Name" -TimeoutSeconds 120 | Out-Host
+$snapshots = & $monitor 'info snapshots' -TimeoutSeconds 30
+if ($snapshots -notmatch "(?m)\b$([regex]::Escape($Name))\b") {
+    throw "QEMU did not list the requested snapshot after savevm: $Name"
+}
+$snapshots

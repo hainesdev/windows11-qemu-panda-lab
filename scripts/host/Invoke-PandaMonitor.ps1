@@ -8,6 +8,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $config = & (Join-Path $PSScriptRoot 'Get-LabConfig.ps1')
+. (Join-Path $PSScriptRoot 'MonitorProtocol.ps1')
 $client = [Net.Sockets.TcpClient]::new()
 $client.Connect('127.0.0.1', [int]$config.MonitorPort)
 $stream = $client.GetStream()
@@ -30,13 +31,24 @@ function Read-MonitorText([int]$TimeoutMs = 3000) {
         if ($builder.ToString() -match '\(qemu\)\s*$') { break }
         Start-Sleep -Milliseconds 50
     } while ((Get-Date) -lt $deadline)
-    $builder.ToString()
+    $text = $builder.ToString()
+    [pscustomobject]@{
+        Text = $text
+        PromptReceived = $text -match '\(qemu\)\s*$'
+    }
 }
 
 try {
-    $null = Read-MonitorText
+    $greeting = Read-MonitorText
+    if (-not $greeting.PromptReceived) {
+        throw 'Timed out waiting for the initial QEMU monitor prompt.'
+    }
     $writer.WriteLine($Command)
-    Read-MonitorText -TimeoutMs ($TimeoutSeconds * 1000)
+    $response = Read-MonitorText -TimeoutMs ($TimeoutSeconds * 1000)
+    Assert-PandaMonitorResponse `
+        -Command $Command `
+        -Text $response.Text `
+        -PromptReceived $response.PromptReceived
 }
 finally {
     $writer.Dispose()

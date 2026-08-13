@@ -1,12 +1,21 @@
 # Complete runbook
 
-This runbook starts with an existing licensed Windows 11 VDI. If you are
-installing Windows from ISO, first create and install a conventional modern
-QEMU VM, then use its disk as the source described here.
+This runbook starts with an existing licensed Windows 11 VDI. The repository
+does not attach a Windows ISO or configure the TPM/Secure Boot environment
+needed for a standard fresh Windows 11 installation. Prepare the source in a
+supported hypervisor first; see [SOURCE-VM.md](SOURCE-VM.md).
 
 Run host commands from the repository root in PowerShell.
 
-## 1. Verify prerequisites
+## 1. Verify prerequisites and source state
+
+Read [PREREQUISITES.md](PREREQUISITES.md) and
+[SOURCE-VM.md](SOURCE-VM.md) before creating an overlay. In particular:
+
+- consolidate any VirtualBox snapshot chain;
+- retain the BitLocker recovery key and account for a virtual-TPM change;
+- disable hibernation/Fast Startup in the lab clone; and
+- shut the VM down completely.
 
 ```powershell
 docker version
@@ -39,7 +48,19 @@ Set at least:
 - QEMU executable and EDK2/OVMF firmware paths;
 - unused loopback ports if 2222, 4444, 5955, or 6080 are occupied.
 
+All generated disk and firmware paths must stay under `WorkRoot`. Relative
+subdirectories are supported and created automatically; attempts to escape the
+work root are rejected before Docker is started.
+
 The local configuration is ignored by Git.
+
+Run preflight before creating artifacts:
+
+```powershell
+.\scripts\host\Test-HostPrerequisites.ps1
+```
+
+WHPX warnings allow the TCG fallback. Required failures should be resolved.
 
 ## 3. Create the preparation disk
 
@@ -77,7 +98,9 @@ Generate a dedicated Ed25519 identity and bootstrap:
 .\scripts\host\New-GuestBootstrap.ps1
 ```
 
-The script prints a Python command. Run it on the host and leave it running.
+The script prints a Python command. Run it on the host and leave it running
+only until setup completes. The generated endpoint contains executable
+PowerShell and is intended solely for the isolated QEMU preparation network.
 Then open **elevated Windows PowerShell** in the guest and execute:
 
 ```powershell
@@ -107,6 +130,10 @@ Reboot Windows. Then validate from the host:
 
 Require authenticated command execution—not merely an open TCP port. Shut
 Windows down normally after the test.
+
+Review all guest changes and rollback choices in
+[GUEST-CHANGES.md](GUEST-CHANGES.md). The clean rollback is to discard the
+preparation overlay.
 
 ## 6. Optional TCG compatibility boot
 
@@ -138,6 +165,12 @@ The initializer:
 3. creates a small writable qcow2 overlay over that seed;
 4. copies private PANDA firmware files; and
 5. prints the final backing chain.
+
+Initialization is intentionally non-destructive. If the seed or active overlay
+already exists, it is preserved. Later changes to the preparation VM will not
+magically propagate into an existing seed. To rebuild, stop every VM/container,
+archive the existing seed and active overlay together, move both aside, and
+rerun initialization. Never overwrite disks belonging to retained recordings.
 
 The required final chain is:
 
@@ -191,6 +224,23 @@ PANDA. The originating guest fully booted only after a much longer wait. Sample
 registers and block I/O through the monitor; if they continue changing, extend
 the observation window.
 
+Measure authenticated SSH readiness rather than estimating it:
+
+```powershell
+.\scripts\host\Wait-PandaGuestSsh.ps1 -TimeoutMinutes 240
+```
+
+After the desktop and SSH are stable, close applications, allow background I/O
+to settle, and create the application baseline snapshot used later:
+
+```powershell
+.\scripts\host\Save-PandaSnapshot.ps1 -Name root
+.\scripts\host\Invoke-PandaMonitor.ps1 'info snapshots'
+```
+
+The `root` snapshot is not created automatically. The later application example
+depends on it.
+
 ## 10. Validate snapshot, record, and replay
 
 Create and list a snapshot:
@@ -210,7 +260,8 @@ Start-Sleep -Seconds 3
 .\scripts\host\Stop-PandaRecording.ps1
 ```
 
-Both recording files must be nonempty:
+`Stop-PandaRecording.ps1` now waits for and validates both files, then writes a
+`rr-smoke-metadata.json` file. Confirm independently if desired:
 
 ```powershell
 $config = Import-PowerShellDataFile .\config\panda.psd1
@@ -229,6 +280,12 @@ Stop the live VM before replay:
 
 Success requires replay completion and a nonempty
 `analyses\rr-smoke-coverage.csv`.
+
+If a recording fails during finalization, the script deliberately retains
+`WorkRoot\active-recording.json`. Preserve the logs and marker for diagnosis.
+After confirming that PANDA is stopped and the recording is unusable, move the
+marker aside before retrying. `Stop-Panda.ps1` refuses to stop over an active
+marker unless `-Force` is supplied for recovery.
 
 ## 11. Record an application scenario
 
@@ -268,3 +325,12 @@ For an existing recording, treat these as one compatibility set:
 
 Re-run the smoke replay after moving to another host before collecting new
 evidence.
+
+Generate a local provenance manifest before and after important experiments:
+
+```powershell
+.\scripts\host\Export-LabManifest.ps1 -IncludeLargeFileHashes
+```
+
+See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for what can be reproduced without
+publishing licensed disks, credentials, samples, or private recordings.

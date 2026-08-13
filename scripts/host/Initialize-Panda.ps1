@@ -5,20 +5,18 @@ $ErrorActionPreference = 'Stop'
 $config = & (Join-Path $PSScriptRoot 'Get-LabConfig.ps1')
 $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $containerRoot = Join-Path $repoRoot 'container'
-
-function Resolve-WorkPath([string]$Path) {
-    if ([IO.Path]::IsPathRooted($Path)) { return $Path }
-    Join-Path $config.WorkRoot $Path
-}
+. (Join-Path $PSScriptRoot 'LabPaths.ps1')
 
 docker info --format '{{.ServerVersion}}' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Docker Desktop is not running with Linux containers.' }
 
-$prepOverlay = Resolve-WorkPath $config.PrepOverlay
-$seedDisk = Resolve-WorkPath $config.SeedDisk
-$activeDisk = Resolve-WorkPath $config.ActiveDisk
-$code = Resolve-WorkPath $config.PandaCode
-$vars = Resolve-WorkPath $config.PandaVars
+$prepOverlay = Resolve-LabWorkPath -Config $config -Path $config.PrepOverlay
+$seedDisk = Resolve-LabWorkPath -Config $config -Path $config.SeedDisk
+$activeDisk = Resolve-LabWorkPath -Config $config -Path $config.ActiveDisk
+$code = Resolve-LabWorkPath -Config $config -Path $config.PandaCode
+$vars = Resolve-LabWorkPath -Config $config -Path $config.PandaVars
+$seedContainerPath = ConvertTo-LabContainerPath -Config $config -Path $config.SeedDisk
+$activeContainerPath = ConvertTo-LabContainerPath -Config $config -Path $config.ActiveDisk
 
 foreach ($required in $config.QemuImg, $config.HostOvmfCode, $config.HostOvmfVars, $prepOverlay) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
@@ -34,6 +32,9 @@ if ($runningQemu) {
 New-Item -ItemType Directory -Path $config.WorkRoot -Force | Out-Null
 foreach ($name in 'recordings', 'analyses', 'logs') {
     New-Item -ItemType Directory -Path (Join-Path $config.WorkRoot $name) -Force | Out-Null
+}
+foreach ($generatedFile in $seedDisk, $activeDisk, $code, $vars) {
+    New-Item -ItemType Directory -Path (Split-Path $generatedFile -Parent) -Force | Out-Null
 }
 
 & docker build --tag $config.Image $containerRoot
@@ -54,10 +55,8 @@ if (-not (Test-Path -LiteralPath $seedDisk)) {
 
 if (-not (Test-Path -LiteralPath $activeDisk)) {
     $workMount = "$($config.WorkRoot):/work"
-    $seedName = Split-Path $seedDisk -Leaf
-    $activeName = Split-Path $activeDisk -Leaf
     & docker run --rm --volume $workMount $config.Image `
-        qemu-img create -f qcow2 -F qcow2 -b "/work/$seedName" "/work/$activeName"
+        qemu-img create -f qcow2 -F qcow2 -b $seedContainerPath $activeContainerPath
     if ($LASTEXITCODE -ne 0) { throw 'Failed to create the PANDA writable overlay.' }
 } else {
     Write-Host "Keeping existing PANDA overlay: $activeDisk"
@@ -71,9 +70,8 @@ if (-not (Test-Path -LiteralPath $vars)) {
 }
 
 $workMount = "$($config.WorkRoot):/work"
-$activeName = Split-Path $activeDisk -Leaf
 & docker run --rm --volume $workMount $config.Image `
-    qemu-img info --backing-chain "/work/$activeName"
+    qemu-img info --backing-chain $activeContainerPath
 if ($LASTEXITCODE -ne 0) { throw 'PANDA disk validation failed.' }
 
 Write-Host "PANDA initialized in $($config.WorkRoot)"

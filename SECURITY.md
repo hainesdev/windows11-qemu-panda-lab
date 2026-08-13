@@ -21,6 +21,10 @@ containment layer, not a guarantee of safety.
 - Do not expose the QEMU monitor or noVNC port beyond loopback.
 - Use NAT only for a documented experiment; prefer a controlled local network.
 - Treat packet captures and PANDA logs as potentially sensitive evidence.
+- Review `docs/GUEST-CHANGES.md` before disabling guest security features; use
+  a disposable clone and prefer discarding its overlay for rollback.
+- Treat generated manifests as private until local paths and disk identifiers
+  have been sanitized.
 - Hash important inputs and preserve the exact container digest, machine
   definition, firmware, and recording pair used for an experiment.
 
