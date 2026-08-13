@@ -1,13 +1,76 @@
 # Windows 11 on QEMU and PANDA
 
-An experimental, reproducible lab for preparing a Windows 11 guest with modern
-QEMU on a Windows host, running the same disk under
-[PANDA](https://github.com/panda-re/panda), and validating deterministic
-record/replay.
+Prepare Windows 11 with fast, modern QEMU; boot the same guest under
+[PANDA](https://github.com/panda-re/panda); record a complete execution once;
+and replay it repeatedly for offline dynamic analysis.
+
+## Purpose
+
+PANDA can record nondeterministic events around an entire virtual machine and
+later reproduce the same instruction stream. That is valuable when an analyst
+needs to revisit a rare, stateful, or difficult-to-trigger execution without
+making the application perform it again.
+
+Getting a modern Windows guest into that environment is the difficult part.
+PANDA's public runtime is based on an older QEMU fork, while Windows 11 expects
+modern virtual hardware and is painfully slow under single-vCPU software
+emulation. This project documents and automates the compatibility bridge:
+
+1. prepare and control an existing Windows 11 VDI under hardware-accelerated
+   QEMU;
+2. convert it into a safe disk chain accepted by PANDA's older QEMU runtime;
+3. boot Windows 11 under PANDA and take reusable snapshots;
+4. record a bounded guest execution; and
+5. replay it offline with coverage or additional PANDA analysis plugins.
+
+The result is a reusable whole-system analysis lab, not simply another Windows
+VM launcher.
+
+## What can you do with it?
+
+An analyst can use this project to:
+
+- preserve an original Windows 11 VDI while experimenting in disposable
+  qcow2 overlays;
+- automate the guest through key-only SSH and remote PowerShell;
+- create a clean pre-experiment snapshot and restore the same starting state;
+- record complete machine execution and its nondeterministic inputs;
+- replay the exact recorded execution without reconnecting to the original
+  service or manually reproducing the UI sequence;
+- generate address-space/basic-block coverage that does not require a Windows
+  11 OSI profile;
+- compare traces from different inputs or application behaviors; and
+- retain versions, hashes, timing, logs, and recording metadata so another
+  analyst can reproduce the workflow and audit the evidence.
+
+Typical uses include reverse engineering, unpacking, malware or suspicious
+software analysis, studying anti-debugging behavior, analyzing rare crashes,
+and developing PANDA plugins. PANDA does not make instrumentation invisible,
+but whole-system recording can reduce dependence on an in-process debugger and
+makes post-execution analysis repeatable.
+
+```text
+Existing Windows 11 VDI
+        |
+        v
+Fast QEMU preparation and guest automation
+        |
+        v
+Slow PANDA boot -> snapshot -> bounded recording
+        |
+        v
+Repeatable offline replay -> coverage / plugins / evidence
+```
+
+## Scope and limitations
 
 This repository contains scripts and documentation only. It does **not**
 contain Windows installation media, VM disks, firmware copied from QEMU, SSH
 private keys, PANDA recordings, or proprietary software.
+
+It starts from an already-installed, licensed Windows 11 VDI. It is not a
+Windows installer, a fast general-purpose sandbox, or a guarantee that every
+Windows build and application will work with PANDA.
 
 > [!IMPORTANT]
 > PANDA's current public Docker image is based on a QEMU 2.9-era fork and uses
@@ -15,9 +78,11 @@ private keys, PANDA recordings, or proprietary software.
 > documented Windows OSI profiles. The originating Windows 11 guest did fully
 > boot under PANDA, but startup and interaction were extremely slow. Treat this
 > project as a compatibility lab, not a claim that every Windows 11 build will
-> boot or perform acceptably.
+> boot or perform acceptably. Workloads with an external wall-clock deadline
+> should be captured in a fast VM and reproduced against a local responder
+> before PANDA analysis.
 
-## What this project provides
+## What the repository provides
 
 - A parameterized PowerShell configuration with no machine-specific paths.
 - A fast modern-QEMU/WHPX launcher for preparing an already-installed Windows
