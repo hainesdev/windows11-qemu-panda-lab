@@ -53,6 +53,60 @@ foreach ($file in $markdownFiles) {
     }
 }
 
+$exampleConfigPath = Join-Path $repoRoot 'config\panda.example.psd1'
+$exampleConfig = Import-PowerShellDataFile -LiteralPath $exampleConfigPath
+$requiredConfigKeys = @(
+    'Image', 'Container', 'VmRoot', 'BaseDisk', 'WorkRoot', 'PrepOverlay',
+    'PrepVars', 'SeedDisk', 'ActiveDisk', 'PandaCode', 'PandaVars',
+    'QemuSystem', 'QemuImg', 'HostOvmfCode', 'HostOvmfVars', 'MonitorPort',
+    'NoVncPort', 'SshPort', 'QmpPort'
+)
+foreach ($key in $requiredConfigKeys) {
+    if (-not $exampleConfig.ContainsKey($key)) {
+        $failures.Add("Example configuration is missing: $key")
+    }
+}
+
+. (Join-Path $repoRoot 'scripts\host\LabPaths.ps1')
+$pathTestConfig = @{ WorkRoot = 'C:\Panda Test\work' }
+$containerPath = ConvertTo-LabContainerPath -Config $pathTestConfig -Path 'nested\disk.qcow2'
+if ($containerPath -ne '/work/nested/disk.qcow2') {
+    $failures.Add("Nested work path mapped incorrectly: $containerPath")
+}
+try {
+    $null = Resolve-LabWorkPath -Config $pathTestConfig -Path '..\escape.qcow2'
+    $failures.Add('WorkRoot path traversal was not rejected.')
+} catch {
+    if ($_.Exception.Message -notmatch 'must remain under WorkRoot') { throw }
+}
+
+. (Join-Path $repoRoot 'scripts\host\MonitorProtocol.ps1')
+$monitorSuccess = Assert-PandaMonitorResponse `
+    -Command 'info status' `
+    -Text "VM status: running`r`n(qemu) " `
+    -PromptReceived $true
+if ($monitorSuccess -notmatch 'VM status: running') {
+    $failures.Add('Successful monitor response was not returned.')
+}
+foreach ($badResponse in @(
+    'Error while writing VM state',
+    'unknown command: begin_recrd',
+    'Device pflash does not support snapshots'
+)) {
+    try {
+        $null = Assert-PandaMonitorResponse -Command 'test' -Text $badResponse -PromptReceived $true
+        $failures.Add("Monitor failure response was accepted: $badResponse")
+    } catch {
+        if ($_.Exception.Message -notmatch 'QEMU monitor rejected') { throw }
+    }
+}
+try {
+    $null = Assert-PandaMonitorResponse -Command 'test' -Text '' -PromptReceived $false
+    $failures.Add('Monitor timeout response was accepted.')
+} catch {
+    if ($_.Exception.Message -notmatch 'Timed out') { throw }
+}
+
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Error $_ }
     throw "$($failures.Count) repository validation check(s) failed."

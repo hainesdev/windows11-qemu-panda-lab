@@ -3,15 +3,11 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $config = & (Join-Path $PSScriptRoot 'Get-LabConfig.ps1')
-
-function Resolve-WorkPath([string]$Path) {
-    if ([IO.Path]::IsPathRooted($Path)) { return $Path }
-    Join-Path $config.WorkRoot $Path
-}
+. (Join-Path $PSScriptRoot 'LabPaths.ps1')
 
 $baseDisk = Join-Path $config.VmRoot $config.BaseDisk
-$prepOverlay = Resolve-WorkPath $config.PrepOverlay
-$prepVars = Resolve-WorkPath $config.PrepVars
+$prepOverlay = Resolve-LabWorkPath -Config $config -Path $config.PrepOverlay
+$prepVars = Resolve-LabWorkPath -Config $config -Path $config.PrepVars
 
 foreach ($required in $config.QemuImg, $config.HostOvmfCode, $config.HostOvmfVars, $baseDisk) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
@@ -21,6 +17,7 @@ foreach ($required in $config.QemuImg, $config.HostOvmfCode, $config.HostOvmfVar
 
 New-Item -ItemType Directory -Path $config.WorkRoot -Force | Out-Null
 New-Item -ItemType Directory -Path (Split-Path $prepOverlay -Parent) -Force | Out-Null
+New-Item -ItemType Directory -Path (Split-Path $prepVars -Parent) -Force | Out-Null
 
 if (-not (Test-Path -LiteralPath $prepOverlay)) {
     & $config.QemuImg create -f qcow2 -F vdi -b $baseDisk $prepOverlay

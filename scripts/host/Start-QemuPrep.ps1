@@ -9,11 +9,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $config = & (Join-Path $PSScriptRoot 'Get-LabConfig.ps1')
-
-function Resolve-WorkPath([string]$Path) {
-    if ([IO.Path]::IsPathRooted($Path)) { return $Path }
-    Join-Path $config.WorkRoot $Path
-}
+. (Join-Path $PSScriptRoot 'LabPaths.ps1')
 
 function Join-NativeArguments([string[]]$Arguments) {
     ($Arguments | ForEach-Object {
@@ -22,8 +18,8 @@ function Join-NativeArguments([string[]]$Arguments) {
     }) -join ' '
 }
 
-$disk = Resolve-WorkPath $config.PrepOverlay
-$vars = Resolve-WorkPath $config.PrepVars
+$disk = Resolve-LabWorkPath -Config $config -Path $config.PrepOverlay
+$vars = Resolve-LabWorkPath -Config $config -Path $config.PrepVars
 $pidFile = Join-Path $config.WorkRoot 'qemu-prep.pid'
 
 foreach ($required in $config.QemuSystem, $config.HostOvmfCode, $disk, $vars) {

@@ -1,8 +1,14 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$Force
+)
 
 $ErrorActionPreference = 'Stop'
 $config = & (Join-Path $PSScriptRoot 'Get-LabConfig.ps1')
+$recordingMarker = Join-Path $config.WorkRoot 'active-recording.json'
+if ((Test-Path -LiteralPath $recordingMarker) -and -not $Force) {
+    throw "A recording may still be active. Run Stop-PandaRecording.ps1 first, or use -Force only for recovery: $recordingMarker"
+}
 $running = docker ps --filter "name=^/$($config.Container)$" --format '{{.Names}}'
 if ($running -ne $config.Container) {
     Write-Host 'PANDA is not running.'

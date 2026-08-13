@@ -20,7 +20,8 @@ private keys, PANDA recordings, or proprietary software.
 ## What this project provides
 
 - A parameterized PowerShell configuration with no machine-specific paths.
-- A fast modern-QEMU/WHPX launcher for installing and preparing Windows 11.
+- A fast modern-QEMU/WHPX launcher for preparing an already-installed Windows
+  11 VDI.
 - An optional modern-QEMU TCG compatibility boot using one `Westmere` vCPU.
 - Idempotent guest preparation that disables guest Hyper-V/VBS and provisions
   key-only OpenSSH control.
@@ -65,18 +66,28 @@ changes are isolated in qcow2 overlays.
 The fast preparation launcher uses WHPX. PANDA itself does not use WHPX and
 will be much slower.
 
+This project does not currently install Windows from an ISO. The starting VDI
+must be a complete, fully shut-down UEFI Windows 11 installation. Read
+[Source VM requirements](docs/SOURCE-VM.md) before pointing the scripts at a
+VirtualBox disk; unresolved snapshots, hibernation, or TPM-bound encryption
+are common sources of misleading boot failures.
+
 ## Quick start
 
-1. Copy the example configuration and edit its paths:
+1. Read the [host prerequisites](docs/PREREQUISITES.md) and
+   [source VM requirements](docs/SOURCE-VM.md), then copy the example
+   configuration and edit its paths:
 
    ```powershell
    Copy-Item .\config\panda.example.psd1 .\config\panda.psd1
    notepad .\config\panda.psd1
    ```
 
-2. Create the modern-QEMU preparation overlay:
+2. Run the non-mutating preflight and create the modern-QEMU preparation
+   overlay:
 
    ```powershell
+   .\scripts\host\Test-HostPrerequisites.ps1
    .\scripts\host\Initialize-QemuPrep.ps1
    ```
 
@@ -118,9 +129,13 @@ will be much slower.
 
 ## Documentation
 
+- [Host prerequisites and preflight](docs/PREREQUISITES.md)
+- [Source Windows 11 VM requirements](docs/SOURCE-VM.md)
 - [Complete runbook](docs/RUNBOOK.md)
 - [Compatibility status and limitations](docs/COMPATIBILITY.md)
 - [Validation gates](docs/VALIDATION.md)
+- [Reproducibility and provenance](docs/REPRODUCIBILITY.md)
+- [Guest changes and rollback](docs/GUEST-CHANGES.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Security and isolation](SECURITY.md)
 

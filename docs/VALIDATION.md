@@ -125,3 +125,13 @@ For reproducible application traces, preserve:
 - network mode and any local responder version;
 - exact recording pair and plugin output; and
 - a short description of user actions during recording.
+
+Use `Export-LabManifest.ps1` for host/tool/firmware/disk provenance and
+`Wait-PandaGuestSsh.ps1` for measured boot-to-SSH time. These files remain
+outside Git because they contain local paths and may identify private disk
+artifacts.
+
+The public CI parses scripts, checks local documentation links, scans for
+obvious private material, and parses the container shell scripts. It cannot
+boot a licensed Windows image or perform an end-to-end PANDA record/replay.
+Passing CI therefore validates repository structure, not guest compatibility.

@@ -7,18 +7,17 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $config = & (Join-Path $PSScriptRoot 'Get-LabConfig.ps1')
-
-function Resolve-WorkPath([string]$Path) {
-    if ([IO.Path]::IsPathRooted($Path)) { return $Path }
-    Join-Path $config.WorkRoot $Path
-}
+. (Join-Path $PSScriptRoot 'LabPaths.ps1')
 
 docker info --format '{{.ServerVersion}}' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Docker Desktop is not running.' }
 
-$activeDisk = Resolve-WorkPath $config.ActiveDisk
-$code = Resolve-WorkPath $config.PandaCode
-$vars = Resolve-WorkPath $config.PandaVars
+$activeDisk = Resolve-LabWorkPath -Config $config -Path $config.ActiveDisk
+$code = Resolve-LabWorkPath -Config $config -Path $config.PandaCode
+$vars = Resolve-LabWorkPath -Config $config -Path $config.PandaVars
+$activeContainerPath = ConvertTo-LabContainerPath -Config $config -Path $config.ActiveDisk
+$codeContainerPath = ConvertTo-LabContainerPath -Config $config -Path $config.PandaCode
+$varsContainerPath = ConvertTo-LabContainerPath -Config $config -Path $config.PandaVars
 foreach ($required in $config.WorkRoot, $activeDisk, $code, $vars) {
     if (-not (Test-Path -LiteralPath $required)) { throw "PANDA is not initialized. Missing: $required" }
 }
@@ -43,9 +42,9 @@ if ($running -ne $config.Container) {
         '--publish', "127.0.0.1:$($config.SshPort):2222"
         '--volume', $workMount
         '--env', "PANDA_NETWORK=$Network"
-        '--env', "PANDA_DISK=/work/$(Split-Path $activeDisk -Leaf)"
-        '--env', "PANDA_OVMF_CODE=/work/$(Split-Path $code -Leaf)"
-        '--env', "PANDA_VARS=/work/$(Split-Path $vars -Leaf)"
+        '--env', "PANDA_DISK=$activeContainerPath"
+        '--env', "PANDA_OVMF_CODE=$codeContainerPath"
+        '--env', "PANDA_VARS=$varsContainerPath"
         $config.Image
     )
     $containerId = & docker @dockerArgs

@@ -9,6 +9,7 @@
     # All generated disks, firmware copies, keys, recordings, and logs.
     WorkRoot = 'D:\VMs\Windows11\panda'
 
+    # Generated paths may use subdirectories, but must remain under WorkRoot.
     PrepOverlay = 'qemu\Windows11-panda-prep.qcow2'
     PrepVars = 'qemu\Windows11-prep-vars.fd'
     SeedDisk = 'Windows11-panda-seed.qcow2'
